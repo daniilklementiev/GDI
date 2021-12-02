@@ -3,13 +3,22 @@
 
 #include "framework.h"
 #include "GDI.h"
-
-#define MAX_LOADSTRING 100
+#include <CommCtrl.h>
+#include "windowsx.h"
+#define MAX_LOADSTRING             100
+#define CMD_BUTTON_ELLIPS          1001
 
 // Global Variables:
-HINSTANCE hInst;                                // current instance
-WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
-WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
+HINSTANCE   hInst;                                // current instance
+WCHAR       szTitle[MAX_LOADSTRING];                  // The title bar text
+WCHAR       szWindowClass[MAX_LOADSTRING];            // the main window class name
+bool        isLeftHold, isRightHold;
+HDC         dc;
+HPEN        pen;
+HWND        static_pen_size;
+WCHAR       str[MAX_LOADSTRING];
+int         pen_size = 1;
+HWND ellips;
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -55,13 +64,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     return (int) msg.wParam;
 }
 
-
-
-//
-//  FUNCTION: MyRegisterClass()
-//
-//  PURPOSE: Registers the window class.
-//
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
     WNDCLASSEXW wcex;
@@ -75,7 +77,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.hInstance      = hInstance;
     wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_GDI));
     wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
-    wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
+    wcex.hbrBackground  = CreateSolidBrush(RGB(250,200,100));
     wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_GDI);
     wcex.lpszClassName  = szWindowClass;
     wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
@@ -83,16 +85,6 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     return RegisterClassExW(&wcex);
 }
 
-//
-//   FUNCTION: InitInstance(HINSTANCE, int)
-//
-//   PURPOSE: Saves instance handle and creates main window
-//
-//   COMMENTS:
-//
-//        In this function, we save the instance handle in a global variable and
-//        create and display the main program window.
-//
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Store instance handle in our global variable
@@ -111,26 +103,97 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
-//
-//  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  PURPOSE: Processes messages for the main window.
-//
-//  WM_COMMAND  - process the application menu
-//  WM_PAINT    - Paint the main window
-//  WM_DESTROY  - post a quit message and return
-//
-//
+
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
+    case WM_CREATE: {
+        ellips = CreateWindowW(L"Button", L"Ellips", WS_CHILD | WS_VISIBLE, 10, 40, 75, 23, hWnd, (HMENU)CMD_BUTTON_ELLIPS, hInst, 0);
+        isLeftHold = isRightHold = false;
+        dc = GetDC(hWnd);
+        static_pen_size = CreateWindowW(L"Static", L"1", WS_CHILD | WS_VISIBLE, 10, 10, 50, 20, hWnd, 0, hInst, 0);
+        pen = CreatePen(PS_SOLID, pen_size, RGB(250, 0, 0));
+        break;
+    }
+    case WM_LBUTTONDOWN: {
+        isLeftHold = true;
+        MoveToEx(dc, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), NULL);
+        SetCapture(hWnd);
+        break;
+        
+    }
+    
+    case WM_MOUSEWHEEL: {
+        if ((int)wParam < 0 && pen_size > 1) {
+            pen_size--;
+            _itow_s(pen_size, str, 10);
+            SendMessageW(static_pen_size, WM_SETTEXT, 100, (LPARAM)str);
+        }
+            
+        else if ((int)wParam >= 0 && pen_size >= 1) {
+            pen_size++; 
+            _itow_s(pen_size, str, 10);
+            SendMessageW(static_pen_size, WM_SETTEXT, 100, (LPARAM)str);
+        }
+
+        
+        if (pen_size >= 1)
+        {
+            pen = CreatePen(PS_SOLID, pen_size, RGB(250, 0, 0));
+        }
+        
+        break;
+    }
+    case WM_LBUTTONUP: {
+        isLeftHold = false;
+        ReleaseCapture();
+        break;
+
+    }
+    case WM_RBUTTONDOWN: {
+        isRightHold = true;
+        MoveToEx(dc, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), NULL);
+        SetCapture(hWnd);
+        break;
+
+    }
+    case WM_RBUTTONUP: {
+        isRightHold = false;
+        ReleaseCapture();
+        break;
+
+    }
+    case WM_MOUSEMOVE: {
+        if (isLeftHold){
+            HPEN savedPen = (HPEN)SelectObject(dc, pen);
+            LineTo(dc, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            SelectObject(dc, pen);
+            
+        }
+        else if (isRightHold) {
+            HPEN savedPen = (HPEN)SelectObject(dc, pen);
+            LineTo(dc, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            SelectObject(dc, pen);
+        }
+        break;
+    }
     case WM_COMMAND:
         {
             int wmId = LOWORD(wParam);
             // Parse the menu selections:
             switch (wmId)
             {
+            case CMD_BUTTON_ELLIPS: {
+                SendMessageW(ellips, WM_KILLFOCUS, 0, 0);
+                HBRUSH brush = CreateSolidBrush(RGB(255, 0, 0));
+                HPEN pen = CreatePen(PS_SOLID, pen_size, RGB(255,0,0));
+                SelectObject(dc, brush);
+                SelectObject(dc, pen);
+                Ellipse(dc, 100, 100, 200, 200);
+                break;
+            }
             case IDM_ABOUT:
                 DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
                 break;
@@ -151,11 +214,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
     case WM_DESTROY:
+        DeleteObject(pen);
+        ReleaseDC(hWnd, dc);
         PostQuitMessage(0);
         break;
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
+
     return 0;
 }
 
