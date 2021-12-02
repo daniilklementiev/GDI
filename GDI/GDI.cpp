@@ -5,8 +5,12 @@
 #include "GDI.h"
 #include <CommCtrl.h>
 #include "windowsx.h"
+#include <wingdi.h>
 #define MAX_LOADSTRING             100
 #define CMD_BUTTON_ELLIPS          1001
+#define CMD_BUTTON_RECTANGLE       1002
+#define CMD_BUTTON_ROUNDRECTANGLE  1003
+#define CMD_BUTTON_POLYGON         1004
 
 // Global Variables:
 HINSTANCE   hInst;                                // current instance
@@ -19,6 +23,9 @@ HWND        static_pen_size;
 WCHAR       str[MAX_LOADSTRING];
 int         pen_size = 1;
 HWND ellips;
+HWND rectangle;
+HWND roundrect;
+HWND polygon;
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -111,6 +118,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
     case WM_CREATE: {
         ellips = CreateWindowW(L"Button", L"Ellips", WS_CHILD | WS_VISIBLE, 10, 40, 75, 23, hWnd, (HMENU)CMD_BUTTON_ELLIPS, hInst, 0);
+        rectangle = CreateWindowW(L"Button", L"Rectangle", WS_CHILD | WS_VISIBLE, 10, 70, 75, 23, hWnd, (HMENU)CMD_BUTTON_RECTANGLE, hInst, 0);
+        roundrect = CreateWindowW(L"Button", L"RoundRect", WS_CHILD | WS_VISIBLE, 10, 100, 75, 23, hWnd, (HMENU)CMD_BUTTON_ROUNDRECTANGLE, hInst, 0);
+        polygon = CreateWindowW(L"Button", L"Polygon", WS_CHILD | WS_VISIBLE, 10, 130, 75, 23, hWnd, (HMENU)CMD_BUTTON_POLYGON, hInst, 0);
         isLeftHold = isRightHold = false;
         dc = GetDC(hWnd);
         static_pen_size = CreateWindowW(L"Static", L"1", WS_CHILD | WS_VISIBLE, 10, 10, 50, 20, hWnd, 0, hInst, 0);
@@ -192,6 +202,43 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 SelectObject(dc, brush);
                 SelectObject(dc, pen);
                 Ellipse(dc, 100, 100, 200, 200);
+                DeleteObject(brush);
+                DeleteObject(pen);
+                break;
+            }
+            case CMD_BUTTON_RECTANGLE: {
+                SendMessageW(rectangle, WM_KILLFOCUS, 0, 0);
+                HBRUSH brush = CreateSolidBrush(RGB(255, 0, 0));
+                HPEN pen = CreatePen(PS_SOLID, pen_size, RGB(255, 0, 0));
+                SelectObject(dc, brush);
+                SelectObject(dc, pen);
+                Rectangle (dc, 300, 300, 200, 200);
+                DeleteObject(brush);
+                DeleteObject(pen);
+                break;
+            }
+            case CMD_BUTTON_ROUNDRECTANGLE: {
+                SendMessageW(roundrect, WM_KILLFOCUS, 0, 0);
+                HBRUSH brush = CreateSolidBrush(RGB(255, 0, 0));
+                HPEN pen = CreatePen(PS_SOLID, pen_size, RGB(255, 0, 0));
+                SelectObject(dc, brush);
+                SelectObject(dc, pen);
+                RoundRect(dc, 300, 300, 400, 400, 20, 20);
+                DeleteObject(brush);
+                DeleteObject(pen);
+                break;
+            }
+            case CMD_BUTTON_POLYGON: {
+                SendMessageW(polygon, WM_KILLFOCUS, 0, 0);
+                POINT pt[3];
+                pt[0].x = 800;
+                pt[0].y = 800;
+                pt[1].x = 850;
+                pt[1].x = 850;
+                pt[2].x = 850;
+                pt[2].y = 800;
+                Polygon(dc, pt, 10);
+               
                 break;
             }
             case IDM_ABOUT:
